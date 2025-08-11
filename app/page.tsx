@@ -6,10 +6,25 @@ import Link from "next/link";
 
 // Placeholder images
 const placeholderImages = [
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTh0zj5jWM4qNJ-JJmStkvYLoptwW4cAtxVlQ&s",
-"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTh0zj5jWM4qNJ-JJmStkvYLoptwW4cAtxVlQ&s",
-"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTh0zj5jWM4qNJ-JJmStkvYLoptwW4cAtxVlQ&s",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
+  "meals/Bolgnaise.png",
 ];
+ 
+  
+
 
 // Placeholder product descriptions
 const placeholderDescriptions = {
@@ -27,7 +42,8 @@ type Product = {
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [tempInputValues, setTempInputValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -37,11 +53,70 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  const addToCart = (id: string) => {
-    setCart([...cart, id]);
+  const addToCart = (id: string, quantity: number = 1) => {
+    setCart(prev => ({
+      ...prev,
+      [id]: (prev[id] || 0) + quantity
+    }));
+    // Clear temp input value when adding
+    setTempInputValues(prev => {
+      const newTemp = { ...prev };
+      delete newTemp[id];
+      return newTemp;
+    });
   };
 
-  const totalItems = cart.length;
+  const updateCartQuantity = (id: string, value: string) => {
+    // Store the temporary input value
+    setTempInputValues(prev => ({
+      ...prev,
+      [id]: value
+    }));
+    
+    // If it's a valid number, update the cart
+    const numValue = parseInt(value);
+    if (!isNaN(numValue)) {
+      if (numValue <= 0) {
+        const newCart = { ...cart };
+        delete newCart[id];
+        setCart(newCart);
+        // Also clear temp input
+        setTempInputValues(prev => {
+          const newTemp = { ...prev };
+          delete newTemp[id];
+          return newTemp;
+        });
+      } else {
+        setCart(prev => ({
+          ...prev,
+          [id]: numValue
+        }));
+      }
+    }
+  };
+
+  const getCartQuantity = (id: string) => {
+    // Return temp input value if exists, otherwise cart quantity
+    return tempInputValues[id] !== undefined ? tempInputValues[id] : (cart[id] || 0);
+  };
+
+  const removeFromCart = (id: string) => {
+    const newCart = { ...cart };
+    delete newCart[id];
+    setCart(newCart);
+    // Also clear temp input
+    setTempInputValues(prev => {
+      const newTemp = { ...prev };
+      delete newTemp[id];
+      return newTemp;
+    });
+  };
+
+  const hasItemInCart = (id: string) => {
+    return cart[id] !== undefined && cart[id] > 0;
+  };
+
+  const totalItems = Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
 
   return (
     <div className="home-container">
@@ -60,8 +135,14 @@ export default function Home() {
             <Link
               href={{
                 pathname: "/cart",
-                query: { cart: cart.join(",") },
+                query: { 
+                  cart: Object.entries(cart)
+                    .filter(([id, qty]) => qty > 0)
+                    .map(([id, qty]) => `${id}:${qty}`)
+                    .join(",") 
+                },
               }}
+              className={totalItems > 0 ? "cart-link cart-has-items" : "cart-link"}
             >
               🛒 Cart ({totalItems})
             </Link>
@@ -83,6 +164,26 @@ export default function Home() {
                 Chef-prepared, nutritionally balanced meals delivered fresh to
                 your door. No cooking, no cleanup. Just delicious food.
               </p>
+              <button 
+                style={{ display: 'flex', justifyContent:'space-between', alignItems: 'center' }}
+                className="order_now_btn "
+                onClick={() => document.getElementById('featured-meals')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Order Now ! 
+                <svg 
+                  width="20" 
+                  height="20" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  style={{ marginLeft: '8px'}}
+                >
+                  <polyline  points="6,9 12,15 18,9"></polyline>
+                </svg>
+              </button>
 
             </div>
             <div className="hero-image">
@@ -94,7 +195,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="featured-meals-section">
+        <section className="featured-meals-section" id="featured-meals">
           <div className="container">
             <h2>Featured Meals</h2>
             <p className="featured-subtitle">
@@ -102,7 +203,7 @@ export default function Home() {
             </p>
             <div className="meal-cards-container">
               {products.length > 0
-                ? products.slice(0, 4).map((p, index) => (
+                ? products.map((p, index) => (
                     <div key={p.id} className="meal-card">
                       <img
                         src={placeholderImages[index]}
@@ -115,17 +216,39 @@ export default function Home() {
                           {placeholderDescriptions[p.name as keyof typeof placeholderDescriptions]}
                         </p>
                         <div className="meal-action">
-                          <span className="meal-price">${p.price}</span>
+                          <span className="meal-price">TND {p.price}</span>
                           <div className="cart-controls">
-                            <button
-                              className="add-to-cart-btn"
-                              onClick={() => addToCart(p.id)}
-                            >
-                              Add to cart
-                            </button>
-                            {cart.filter((id) => id === p.id).length > 0 && (
+                            <div className="quantity-controls">
+                              {hasItemInCart(p.id) && (
+                                <>
+                                  <input
+                                    type="number"
+                                    placeholder="In Cart"
+                                    min="0"
+                                    max="99"
+                                    value={getCartQuantity(p.id)}
+                                    onChange={(e) => updateCartQuantity(p.id, e.target.value || "")}
+                                    className="quantity-input"
+                                  />
+                                  <button
+                                    className="remove-btn"
+                                    onClick={() => removeFromCart(p.id)}
+                                    title="Remove from cart"
+                                  >
+                                    ✕
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                className="add-to-cart-btn"
+                                onClick={() => addToCart(p.id, 1)}
+                              >
+                                {hasItemInCart(p.id) ? "Add More" : "Add to Cart"}
+                              </button>
+                            </div>
+                            {hasItemInCart(p.id) && (
                               <span className="cart-quantity">
-                                In cart: {cart.filter((id) => id === p.id).length}
+                                In cart: {cart[p.id] || 0}
                               </span>
                             )}
                           </div>
@@ -134,7 +257,6 @@ export default function Home() {
                     </div>
                   ))
                 : Object.keys(placeholderDescriptions)
-                    .slice(0, 4)
                     .map((name, index) => (
                       <div key={index} className="meal-card">
                         <img
@@ -148,17 +270,38 @@ export default function Home() {
                             {placeholderDescriptions[name as keyof typeof placeholderDescriptions]}
                           </p>
                           <div className="meal-action">
-                            <span className="meal-price">${Math.floor(Math.random() * 10 + 15)}.99</span>
+                            <span className="meal-price">TND{Math.floor(Math.random() * 10 + 15)}.99</span>
                             <div className="cart-controls">
-                              <button
-                                className="add-to-cart-btn"
-                                onClick={() => addToCart(`product-id-${index}`)}
-                              >
-                                Add to cart
-                              </button>
-                              {cart.filter((id) => id === `product-id-${index}`).length > 0 && (
+                              <div className="quantity-controls">
+                                {hasItemInCart(`product-id-${index}`) && (
+                                  <>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="99"
+                                      value={getCartQuantity(`product-id-${index}`)}
+                                      onChange={(e) => updateCartQuantity(`product-id-${index}`, e.target.value)}
+                                      className="quantity-input"
+                                    />
+                                    <button
+                                      className="remove-btn"
+                                      onClick={() => removeFromCart(`product-id-${index}`)}
+                                      title="Remove from cart"
+                                    >
+                                      ✕
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  className="add-to-cart-btn"
+                                  onClick={() => addToCart(`product-id-${index}`, 1)}
+                                >
+                                  {hasItemInCart(`product-id-${index}`) ? "Add More" : "Add to Cart"}
+                                </button>
+                              </div>
+                              {hasItemInCart(`product-id-${index}`) && (
                                 <span className="cart-quantity">
-                                  In cart: {cart.filter((id) => id === `product-id-${index}`).length}
+                                  In cart: {getCartQuantity(`product-id-${index}`)}
                                 </span>
                               )}
                             </div>

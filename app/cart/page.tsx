@@ -19,7 +19,7 @@ type CartItemWithQuantity = {
 
 export default function CartPage() {
   const searchParams = useSearchParams();
-  const [cartItems, setCartItems] = useState<string[]>([]);
+  const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [cartWithQuantities, setCartWithQuantities] = useState<CartItemWithQuantity[]>([]);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -30,40 +30,59 @@ export default function CartPage() {
     setMounted(true);
   }, []);
 
-  // Parse cart from query string
+  // Parse cart from query string - now expects "id:qty,id:qty" format
   useEffect(() => {
     if (mounted && searchParams) {
       const cartParam = searchParams.get('cart');
-      if (cartParam) {
+      console.log('Cart param received:', cartParam); // Debug log
+      
+      if (cartParam && cartParam.trim() !== '') {
+        const cartObject: Record<string, number> = {};
         const items = cartParam.split(",").filter(item => item.length > 0);
-        setCartItems(items);
+        
+        console.log('Cart items to process:', items); // Debug log
+        
+        items.forEach(item => {
+          const [id, qtyStr] = item.split(":");
+          const quantity = parseInt(qtyStr) || 0;
+          if (quantity > 0 && id) {
+            cartObject[id] = quantity;
+          }
+        });
+        
+        console.log('Final cart object:', cartObject); // Debug log
+        setCartItems(cartObject);
       }
     }
   }, [searchParams, mounted]);
 
-  // Fetch product data and calculate quantities
+  // Fetch product data and set up cart with quantities
   useEffect(() => {
     const fetchCartProducts = async () => {
-      if (cartItems.length === 0) {
+      const productIds = Object.keys(cartItems);
+      
+      console.log('Product IDs to fetch:', productIds); // Debug log
+      
+      if (productIds.length === 0) {
         setCartWithQuantities([]);
         return;
       }
 
-      // Get unique product IDs
-      const uniqueIds = [...new Set(cartItems)];
-      
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("products")
         .select("*")
-        .in("id", uniqueIds);
+        .in("id", productIds);
+
+      console.log('Fetched products:', data); // Debug log
+      console.log('Fetch error:', error); // Debug log
 
       if (data) {
-        // Calculate quantities for each product
         const cartWithQty = data.map(product => ({
           product,
-          quantity: cartItems.filter(id => id === product.id).length
+          quantity: cartItems[product.id] || 0
         }));
         
+        console.log('Cart with quantities:', cartWithQty); // Debug log
         setCartWithQuantities(cartWithQty);
       }
     };
@@ -100,7 +119,7 @@ export default function CartPage() {
     sum + (Number(item.product.price) * item.quantity), 0
   );
 
-  const totalItems = cartItems.length;
+  const totalItems = Object.values(cartItems).reduce((sum, quantity) => sum + quantity, 0);
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
