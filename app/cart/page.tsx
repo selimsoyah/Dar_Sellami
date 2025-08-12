@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import OrderForm from '../components/OrderForm';
@@ -17,7 +17,7 @@ type CartItemWithQuantity = {
   quantity: number;
 };
 
-export default function CartPage() {
+function CartContent() {
   const searchParams = useSearchParams();
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [cartWithQuantities, setCartWithQuantities] = useState<CartItemWithQuantity[]>([]);
@@ -194,5 +194,20 @@ export default function CartPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <Suspense fallback={
+      <div className="cart-page-container">
+        <div className="container">
+          <h1>Your Cart</h1>
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <CartContent />
+    </Suspense>
   );
 }
