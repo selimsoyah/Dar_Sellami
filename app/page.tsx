@@ -66,6 +66,38 @@ export default function Home() {
     });
   };
 
+  const incrementQuantity = (id: string) => {
+    setCart(prev => ({
+      ...prev,
+      [id]: (prev[id] || 0) + 1
+    }));
+    // Clear temp input value
+    setTempInputValues(prev => {
+      const newTemp = { ...prev };
+      delete newTemp[id];
+      return newTemp;
+    });
+  };
+
+  const decrementQuantity = (id: string) => {
+    const currentQty = cart[id] || 0;
+    if (currentQty > 1) {
+      setCart(prev => ({
+        ...prev,
+        [id]: currentQty - 1
+      }));
+    } else {
+      // Remove from cart if quantity becomes 0
+      removeFromCart(id);
+    }
+    // Clear temp input value
+    setTempInputValues(prev => {
+      const newTemp = { ...prev };
+      delete newTemp[id];
+      return newTemp;
+    });
+  };
+
   const updateCartQuantity = (id: string, value: string) => {
     // Store the temporary input value
     setTempInputValues(prev => ({
@@ -218,38 +250,42 @@ export default function Home() {
                         <div className="meal-action">
                           <span className="meal-price">TND {p.price}</span>
                           <div className="cart-controls">
-                            <div className="quantity-controls">
-                              {hasItemInCart(p.id) && (
-                                <>
-                                  <input
-                                    type="number"
-                                    placeholder="In Cart"
-                                    min="0"
-                                    max="99"
-                                    value={getCartQuantity(p.id)}
-                                    onChange={(e) => updateCartQuantity(p.id, e.target.value || "")}
-                                    className="quantity-input"
-                                  />
-                                  <button
-                                    className="remove-btn"
-                                    onClick={() => removeFromCart(p.id)}
-                                    title="Remove from cart"
-                                  >
-                                    ✕
-                                  </button>
-                                </>
-                              )}
+                            {!hasItemInCart(p.id) ? (
+                              // Show "Add to Cart" button when item is not in cart
                               <button
                                 className="add-to-cart-btn"
                                 onClick={() => addToCart(p.id, 1)}
                               >
-                                {hasItemInCart(p.id) ? "Add More" : "Add to Cart"}
+                                Add to Cart
                               </button>
-                            </div>
-                            {hasItemInCart(p.id) && (
-                              <span className="cart-quantity">
-                                In cart: {cart[p.id] || 0}
-                              </span>
+                            ) : (
+                              // Show quantity controls when item is in cart
+                              <div className="quantity-controls">
+                                <button
+                                  className="quantity-btn minus-btn"
+                                  onClick={() => decrementQuantity(p.id)}
+                                  title="Decrease quantity"
+                                >
+                                  −
+                                </button>
+                                <div className="quantity-display">
+                                  {getCartQuantity(p.id)}
+                                </div>
+                                <button
+                                  className="quantity-btn plus-btn"
+                                  onClick={() => incrementQuantity(p.id)}
+                                  title="Increase quantity"
+                                >
+                                  +
+                                </button>
+                                <button
+                                  className="remove-btn"
+                                  onClick={() => removeFromCart(p.id)}
+                                  title="Remove from cart"
+                                >
+                                  ✕
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -272,37 +308,42 @@ export default function Home() {
                           <div className="meal-action">
                             <span className="meal-price">TND{Math.floor(Math.random() * 10 + 15)}.99</span>
                             <div className="cart-controls">
-                              <div className="quantity-controls">
-                                {hasItemInCart(`product-id-${index}`) && (
-                                  <>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="99"
-                                      value={getCartQuantity(`product-id-${index}`)}
-                                      onChange={(e) => updateCartQuantity(`product-id-${index}`, e.target.value)}
-                                      className="quantity-input"
-                                    />
-                                    <button
-                                      className="remove-btn"
-                                      onClick={() => removeFromCart(`product-id-${index}`)}
-                                      title="Remove from cart"
-                                    >
-                                      ✕
-                                    </button>
-                                  </>
-                                )}
+                              {!hasItemInCart(`product-id-${index}`) ? (
+                                // Show "Add to Cart" button when item is not in cart
                                 <button
                                   className="add-to-cart-btn"
                                   onClick={() => addToCart(`product-id-${index}`, 1)}
                                 >
-                                  {hasItemInCart(`product-id-${index}`) ? "Add More" : "Add to Cart"}
+                                  Add to Cart
                                 </button>
-                              </div>
-                              {hasItemInCart(`product-id-${index}`) && (
-                                <span className="cart-quantity">
-                                  In cart: {getCartQuantity(`product-id-${index}`)}
-                                </span>
+                              ) : (
+                                // Show quantity controls when item is in cart
+                                <div className="quantity-controls">
+                                  <button
+                                    className="quantity-btn minus-btn"
+                                    onClick={() => decrementQuantity(`product-id-${index}`)}
+                                    title="Decrease quantity"
+                                  >
+                                    −
+                                  </button>
+                                  <div className="quantity-display">
+                                    {getCartQuantity(`product-id-${index}`)}
+                                  </div>
+                                  <button
+                                    className="quantity-btn plus-btn"
+                                    onClick={() => incrementQuantity(`product-id-${index}`)}
+                                    title="Increase quantity"
+                                  >
+                                    +
+                                  </button>
+                                  <button
+                                    className="remove-btn"
+                                    onClick={() => removeFromCart(`product-id-${index}`)}
+                                    title="Remove from cart"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -352,7 +393,9 @@ export default function Home() {
       <footer className="footer">
         <div className="container">
           <div className="footer-column">
-            <div className="logo">FreshMeals</div>
+            <div className="logo">
+              <img src="/Logo_Footer.png" alt="FreshMeals Logo" style={{ height: 100 }} />
+            </div>
             <p>Fresh, healthy meals delivered to your door.</p>
           </div>
           <div className="footer-column">
