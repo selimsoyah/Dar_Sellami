@@ -109,6 +109,8 @@ function CartContent() {
       alert("Error placing order: " + error.message);
     } else {
       alert("✅ Order placed successfully!");
+      // Clear cart from localStorage after successful order
+      localStorage.removeItem('cart');
       window.location.href = "/";
     }
     setLoading(false);
@@ -176,7 +178,14 @@ function CartContent() {
                 {loading ? "Placing Order..." : "Place Order"}
               </button>
               
-              <Link href="/" className="continue-shopping-btn">
+              <Link 
+                href="/"
+                className="continue-shopping-btn"
+                onClick={() => {
+                  // Ensure cart data is saved to localStorage before navigating
+                  localStorage.setItem('cart', JSON.stringify(cartItems));
+                }}
+              >
                 Continue Shopping
               </Link>
             </div>
@@ -186,6 +195,8 @@ function CartContent() {
                 cartItems={cartWithQuantities}
                 onSuccess={() => {
                   alert("✅ Order placed successfully!");
+                  // Clear cart from localStorage after successful order
+                  localStorage.removeItem('cart');
                   window.location.href = "/";
                 }}
               />

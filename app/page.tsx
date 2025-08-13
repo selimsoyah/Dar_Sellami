@@ -44,6 +44,29 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [tempInputValues, setTempInputValues] = useState<Record<string, string>>({});
+  const [cartLoaded, setCartLoaded] = useState(false);
+
+  // Load cart from localStorage on component mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        setCart(parsedCart);
+      } catch (error) {
+        console.error('Error parsing cart from localStorage:', error);
+        localStorage.removeItem('cart'); // Clear invalid data
+      }
+    }
+    setCartLoaded(true); // Mark cart as loaded
+  }, []);
+
+  // Save cart to localStorage whenever cart changes (but only after initial load)
+  useEffect(() => {
+    if (cartLoaded) {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+  }, [cart, cartLoaded]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -54,10 +77,15 @@ export default function Home() {
   }, []);
 
   const addToCart = (id: string, quantity: number = 1) => {
-    setCart(prev => ({
-      ...prev,
-      [id]: (prev[id] || 0) + quantity
-    }));
+    setCart(prev => {
+      const newCart = {
+        ...prev,
+        [id]: (prev[id] || 0) + quantity
+      };
+      // Immediately save to localStorage
+      localStorage.setItem('cart', JSON.stringify(newCart));
+      return newCart;
+    });
     // Clear temp input value when adding
     setTempInputValues(prev => {
       const newTemp = { ...prev };
@@ -67,10 +95,15 @@ export default function Home() {
   };
 
   const incrementQuantity = (id: string) => {
-    setCart(prev => ({
-      ...prev,
-      [id]: (prev[id] || 0) + 1
-    }));
+    setCart(prev => {
+      const newCart = {
+        ...prev,
+        [id]: (prev[id] || 0) + 1
+      };
+      // Immediately save to localStorage
+      localStorage.setItem('cart', JSON.stringify(newCart));
+      return newCart;
+    });
     // Clear temp input value
     setTempInputValues(prev => {
       const newTemp = { ...prev };
@@ -82,10 +115,15 @@ export default function Home() {
   const decrementQuantity = (id: string) => {
     const currentQty = cart[id] || 0;
     if (currentQty > 1) {
-      setCart(prev => ({
-        ...prev,
-        [id]: currentQty - 1
-      }));
+      setCart(prev => {
+        const newCart = {
+          ...prev,
+          [id]: currentQty - 1
+        };
+        // Immediately save to localStorage
+        localStorage.setItem('cart', JSON.stringify(newCart));
+        return newCart;
+      });
     } else {
       // Remove from cart if quantity becomes 0
       removeFromCart(id);
@@ -109,9 +147,13 @@ export default function Home() {
     const numValue = parseInt(value);
     if (!isNaN(numValue)) {
       if (numValue <= 0) {
-        const newCart = { ...cart };
-        delete newCart[id];
-        setCart(newCart);
+        setCart(prev => {
+          const newCart = { ...prev };
+          delete newCart[id];
+          // Immediately save to localStorage
+          localStorage.setItem('cart', JSON.stringify(newCart));
+          return newCart;
+        });
         // Also clear temp input
         setTempInputValues(prev => {
           const newTemp = { ...prev };
@@ -119,10 +161,15 @@ export default function Home() {
           return newTemp;
         });
       } else {
-        setCart(prev => ({
-          ...prev,
-          [id]: numValue
-        }));
+        setCart(prev => {
+          const newCart = {
+            ...prev,
+            [id]: numValue
+          };
+          // Immediately save to localStorage
+          localStorage.setItem('cart', JSON.stringify(newCart));
+          return newCart;
+        });
       }
     }
   };
@@ -133,9 +180,13 @@ export default function Home() {
   };
 
   const removeFromCart = (id: string) => {
-    const newCart = { ...cart };
-    delete newCart[id];
-    setCart(newCart);
+    setCart(prev => {
+      const newCart = { ...prev };
+      delete newCart[id];
+      // Immediately save to localStorage
+      localStorage.setItem('cart', JSON.stringify(newCart));
+      return newCart;
+    });
     // Also clear temp input
     setTempInputValues(prev => {
       const newTemp = { ...prev };
