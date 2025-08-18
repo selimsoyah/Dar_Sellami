@@ -24,6 +24,8 @@ function CartContent() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showDeliveryOptions, setShowDeliveryOptions] = useState(false);
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup' | null>(null);
 
   // Ensure component is mounted on client side
   useEffect(() => {
@@ -170,13 +172,15 @@ function CartContent() {
             </div>
 
             <div className="cart-actions">
-              <button
-                onClick={() => setShowForm(true)}
-                className="place-order-btn"
-                disabled={loading}
-              >
-                {loading ? "Placing Order..." : "Place Order"}
-              </button>
+              {!showDeliveryOptions && !showForm && (
+                <button
+                  onClick={() => setShowDeliveryOptions(true)}
+                  className="place-order-btn"
+                  disabled={loading}
+                >
+                  Place Order
+                </button>
+              )}
               
               <Link 
                 href="/"
@@ -190,16 +194,75 @@ function CartContent() {
               </Link>
             </div>
 
-            {showForm && (
-              <OrderForm
-                cartItems={cartWithQuantities}
-                onSuccess={() => {
-                  alert("✅ Order placed successfully!");
-                  // Clear cart from localStorage after successful order
-                  localStorage.removeItem('cart');
-                  window.location.href = "/";
-                }}
-              />
+            {/* Delivery Options Selection */}
+            {showDeliveryOptions && !showForm && (
+              <div className="delivery-options-container">
+                <h3>How would you like to receive your order?</h3>
+                <div className="delivery-options">
+                  <button
+                    className="delivery-option-btn delivery-btn"
+                    onClick={() => {
+                      setDeliveryType('delivery');
+                      setShowForm(true);
+                      setShowDeliveryOptions(false);
+                    }}
+                  >
+                    <div className="option-icon">🚚</div>
+                    <div className="option-content">
+                      <h4>Get it Delivered</h4>
+                      <p>We'll deliver to your address</p>
+                    </div>
+                  </button>
+                  
+                  <button
+                    className="delivery-option-btn pickup-btn"
+                    onClick={() => {
+                      setDeliveryType('pickup');
+                      setShowForm(true);
+                      setShowDeliveryOptions(false);
+                    }}
+                  >
+                    <div className="option-icon">🏪</div>
+                    <div className="option-content">
+                      <h4>Come Take it in Person</h4>
+                      <p>Pick up from our location</p>
+                    </div>
+                  </button>
+                </div>
+                
+                <button
+                  className="back-btn"
+                  onClick={() => setShowDeliveryOptions(false)}
+                >
+                  ← Back
+                </button>
+              </div>
+            )}
+
+            {showForm && deliveryType && (
+              <div className="form-container">
+                <button
+                  className="back-btn"
+                  onClick={() => {
+                    setShowForm(false);
+                    setShowDeliveryOptions(true);
+                    setDeliveryType(null);
+                  }}
+                >
+                  ← Back to Options
+                </button>
+                
+                <OrderForm
+                  cartItems={cartWithQuantities}
+                  deliveryType={deliveryType}
+                  onSuccess={() => {
+                    alert("✅ Order placed successfully!");
+                    // Clear cart from localStorage after successful order
+                    localStorage.removeItem('cart');
+                    window.location.href = "/";
+                  }}
+                />
+              </div>
             )}
           </>
         )}
