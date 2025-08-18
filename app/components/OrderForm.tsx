@@ -23,10 +23,11 @@ type CartItemWithQuantity = {
 type Props = {
   cartItems: CartItemWithQuantity[];
   deliveryType: 'delivery' | 'pickup';
+  total: number;
   onSuccess: () => void;
 };
 
-export default function OrderForm({ cartItems, deliveryType, onSuccess }: Props) {
+export default function OrderForm({ cartItems, deliveryType, total, onSuccess }: Props) {
   const [deliveryForm, setDeliveryForm] = useState({
     firstName: "",
     lastName: "",
@@ -54,56 +55,58 @@ export default function OrderForm({ cartItems, deliveryType, onSuccess }: Props)
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
+  e.preventDefault();
+  setSubmitting(true);
 
-    let payload;
+  let payload;
 
-    if (deliveryType === 'delivery') {
-      const { firstName, lastName, phone, address, governorate } = deliveryForm;
-      payload = {
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        address,
-        governorate,
-        delivery_type: 'delivery',
-        items: cartItems.map(item => ({
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          quantity: item.quantity,
-        })),
-      };
-    } else {
-      const { firstName, lastName, phone, pickupTime, notes } = pickupForm;
-      payload = {
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        pickup_time: pickupTime,
-        notes,
-        delivery_type: 'pickup',
-        items: cartItems.map(item => ({
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          quantity: item.quantity,
-        })),
-      };
-    }
+  if (deliveryType === 'delivery') {
+    const { firstName, lastName, phone, address, governorate } = deliveryForm;
+    payload = {
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      address,
+      governorate,
+      delivery_type: 'delivery',
+      total_price: total, // Add this line
+      items: cartItems.map(item => ({
+        id: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+      })),
+    };
+  } else {
+    const { firstName, lastName, phone, pickupTime, notes } = pickupForm;
+    payload = {
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      pickup_time: pickupTime,
+      notes,
+      delivery_type: 'pickup',
+      total_price: total, // Add this line
+      items: cartItems.map(item => ({
+        id: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+      })),
+    };
+  }
 
-    const { error } = await supabase.from("orders").insert(payload);
+  const { error } = await supabase.from("orders").insert(payload);
 
-    if (error) {
-      alert("❌ Error placing order: " + error.message);
-      console.error(error);
-    } else {
-      onSuccess();
-    }
+  if (error) {
+    alert("❌ Error placing order: " + error.message);
+    console.error(error);
+  } else {
+    onSuccess();
+  }
 
-    setSubmitting(false);
-  };
+  setSubmitting(false);
+};
 
   if (deliveryType === 'delivery') {
     return (

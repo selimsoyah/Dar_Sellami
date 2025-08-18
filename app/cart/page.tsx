@@ -27,6 +27,9 @@ function CartContent() {
   const [showDeliveryOptions, setShowDeliveryOptions] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup' | null>(null);
 
+  // 💰 Delivery fee constant
+  const DELIVERY_FEE = 8.00;
+
   // Ensure component is mounted on client side
   useEffect(() => {
     setMounted(true);
@@ -37,13 +40,13 @@ function CartContent() {
     if (mounted && searchParams) {
       const cartParam = searchParams.get('cart');
       console.log('Cart param received:', cartParam); // Debug log
-      
+
       if (cartParam && cartParam.trim() !== '') {
         const cartObject: Record<string, number> = {};
         const items = cartParam.split(",").filter(item => item.length > 0);
-        
+
         console.log('Cart items to process:', items); // Debug log
-        
+
         items.forEach(item => {
           const [id, qtyStr] = item.split(":");
           const quantity = parseInt(qtyStr) || 0;
@@ -51,7 +54,7 @@ function CartContent() {
             cartObject[id] = quantity;
           }
         });
-        
+
         console.log('Final cart object:', cartObject); // Debug log
         setCartItems(cartObject);
       }
@@ -62,9 +65,9 @@ function CartContent() {
   useEffect(() => {
     const fetchCartProducts = async () => {
       const productIds = Object.keys(cartItems);
-      
+
       console.log('Product IDs to fetch:', productIds); // Debug log
-      
+
       if (productIds.length === 0) {
         setCartWithQuantities([]);
         return;
@@ -83,7 +86,7 @@ function CartContent() {
           product,
           quantity: cartItems[product.id] || 0
         }));
-        
+
         console.log('Cart with quantities:', cartWithQty); // Debug log
         setCartWithQuantities(cartWithQty);
       }
@@ -94,7 +97,7 @@ function CartContent() {
 
   const placeOrder = async () => {
     setLoading(true);
-    
+
     // Create proper order payload with product details and quantities
     const orderPayload = {
       items: cartWithQuantities.map(item => ({
@@ -118,10 +121,13 @@ function CartContent() {
     setLoading(false);
   };
 
-  // Calculate total with quantities
-  const total = cartWithQuantities.reduce((sum, item) => 
+  // Calculate totals with delivery fee
+  const subtotal = cartWithQuantities.reduce((sum, item) =>
     sum + (Number(item.product.price) * item.quantity), 0
   );
+
+  const deliveryFee = deliveryType === 'delivery' ? DELIVERY_FEE : 0;
+  const total = subtotal + deliveryFee;
 
   const totalItems = Object.values(cartItems).reduce((sum, quantity) => sum + quantity, 0);
 
@@ -168,7 +174,32 @@ function CartContent() {
 
             <div className="cart-summary">
               <p className="total-items">Total Items: {totalItems}</p>
-              <p className="total-amount">Total: ${total.toFixed(2)}</p>
+              <div className="price-breakdown">
+                <div className="price-line">
+                  <span>Subtotal:</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+
+                {/* Show delivery fee when delivery is selected */}
+                {deliveryType === 'delivery' && (
+                  <div className="price-line delivery-fee">
+                    <span>🚚 Delivery Fee:</span>
+                    <span>${DELIVERY_FEE.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {deliveryType === 'pickup' && (
+                  <div className="price-line pickup-notice">
+                    <span>🏪 Pickup:</span>
+                    <span className="free-text">FREE</span>
+                  </div>
+                )}
+
+                <div className="price-line total-line">
+                  <span><strong>Total:</strong></span>
+                  <span><strong>${total.toFixed(2)}</strong></span>
+                </div>
+              </div>
             </div>
 
             <div className="cart-actions">
@@ -181,8 +212,8 @@ function CartContent() {
                   Place Order
                 </button>
               )}
-              
-              <Link 
+
+              <Link
                 href="/"
                 className="continue-shopping-btn"
                 onClick={() => {
@@ -198,6 +229,15 @@ function CartContent() {
             {showDeliveryOptions && !showForm && (
               <div className="delivery-options-container">
                 <h3>How would you like to receive your order?</h3>
+
+                {/* 💰 Delivery Fee Notice */}
+                <div className="delivery-fee-notice">
+                  <div className="fee-info">
+                    <span className="fee-icon">💰</span>
+                    <span>Delivery service includes a $8.00 fee</span>
+                  </div>
+                </div>
+
                 <div className="delivery-options">
                   <button
                     className="delivery-option-btn delivery-btn"
@@ -211,9 +251,10 @@ function CartContent() {
                     <div className="option-content">
                       <h4>Get it Delivered</h4>
                       <p>We'll deliver to your address</p>
+                      <div className="fee-badge">+ $8.00 delivery fee</div>
                     </div>
                   </button>
-                  
+
                   <button
                     className="delivery-option-btn pickup-btn"
                     onClick={() => {
@@ -226,10 +267,11 @@ function CartContent() {
                     <div className="option-content">
                       <h4>Come Take it in Person</h4>
                       <p>Pick up from our location</p>
+                      <div className="free-badge">FREE - No delivery fee</div>
                     </div>
                   </button>
                 </div>
-                
+
                 <button
                   className="back-btn"
                   onClick={() => setShowDeliveryOptions(false)}
@@ -241,6 +283,9 @@ function CartContent() {
 
             {showForm && deliveryType && (
               <div className="form-container">
+                {/* 💰 Show current total with delivery fee */}
+
+
                 <button
                   className="back-btn"
                   onClick={() => {
@@ -251,17 +296,17 @@ function CartContent() {
                 >
                   ← Back to Options
                 </button>
-                
+
                 <OrderForm
-                  cartItems={cartWithQuantities}
-                  deliveryType={deliveryType}
-                  onSuccess={() => {
-                    alert("✅ Order placed successfully!");
-                    // Clear cart from localStorage after successful order
-                    localStorage.removeItem('cart');
-                    window.location.href = "/";
-                  }}
-                />
+                      cartItems={cartWithQuantities}
+                      deliveryType={deliveryType}
+                      total={total} // This should already be there from earlier
+                      onSuccess={() => {
+                        alert("✅ Order placed successfully!");
+                        localStorage.removeItem('cart');
+                        window.location.href = "/";
+                      }}
+                    />
               </div>
             )}
           </>

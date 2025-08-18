@@ -17,6 +17,7 @@ type Order = {
   notes?: string;
   items: any[];
   created_at: string;
+  total_price?: number; 
 };
 
 const AdminDashboard = () => {
