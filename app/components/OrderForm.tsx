@@ -29,21 +29,24 @@ type Props = {
 
 export default function OrderForm({ cartItems, deliveryType, total, onSuccess }: Props) {
   const [deliveryForm, setDeliveryForm] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    address: "",
-    governorate: "",
-  });
+  firstName: "",
+  lastName: "",
+  phone: "",
+  email: "", // Add this new line
+  address: "",
+  governorate: "",
+});
 
-  const [pickupForm, setPickupForm] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    pickupTime: "",
-    notes: "",
-  });
-
+const [pickupForm, setPickupForm] = useState({
+  firstName: "",
+  lastName: "",
+  phone: "",
+  email: "", // Add this new line
+  pickupTime: "",
+  notes: "",
+});
+  
+  
   const [submitting, setSubmitting] = useState(false);
 
   const handleDeliveryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -59,17 +62,19 @@ export default function OrderForm({ cartItems, deliveryType, total, onSuccess }:
   setSubmitting(true);
 
   let payload;
+  let orderDetails;
 
   if (deliveryType === 'delivery') {
-    const { firstName, lastName, phone, address, governorate } = deliveryForm;
+    const { firstName, lastName, phone, email, address, governorate } = deliveryForm;
     payload = {
       first_name: firstName,
       last_name: lastName,
       phone,
+      email, // Include email in payload
       address,
       governorate,
       delivery_type: 'delivery',
-      total_price: total, // Add this line
+      total_price: total,
       items: cartItems.map(item => ({
         id: item.product.id,
         name: item.product.name,
@@ -77,16 +82,34 @@ export default function OrderForm({ cartItems, deliveryType, total, onSuccess }:
         quantity: item.quantity,
       })),
     };
+    
+    // Create order details for email
+    orderDetails = {
+      firstName,
+      lastName,
+      email,
+      phone,
+      deliveryType: 'delivery',
+      address,
+      governorate,
+      items: cartItems.map(item => ({
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+      })),
+      total
+    };
   } else {
-    const { firstName, lastName, phone, pickupTime, notes } = pickupForm;
+    const { firstName, lastName, phone, email, pickupTime, notes } = pickupForm;
     payload = {
       first_name: firstName,
       last_name: lastName,
       phone,
+      email, // Include email in payload
       pickup_time: pickupTime,
       notes,
       delivery_type: 'pickup',
-      total_price: total, // Add this line
+      total_price: total,
       items: cartItems.map(item => ({
         id: item.product.id,
         name: item.product.name,
@@ -94,17 +117,73 @@ export default function OrderForm({ cartItems, deliveryType, total, onSuccess }:
         quantity: item.quantity,
       })),
     };
+    
+    // Create order details for email
+    orderDetails = {
+      firstName,
+      lastName,
+      email,
+      phone,
+      deliveryType: 'pickup',
+      pickupTime,
+      notes,
+      items: cartItems.map(item => ({
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+      })),
+      total
+    };
   }
 
-  const { error } = await supabase.from("orders").insert(payload);
+  // Insert order in database
+  const { data: orderData, error } = await supabase
+    .from("orders")
+    .insert(payload)
+    .select('id');
 
   if (error) {
     alert("❌ Error placing order: " + error.message);
     console.error(error);
-  } else {
-    onSuccess();
+    setSubmitting(false);
+    return;
   }
 
+  // If order created successfully, send email confirmation
+  if (orderData && orderData[0]?.id) {
+    const orderId = orderData[0].id;
+    
+    // Add order ID to email details
+    orderDetails.orderId = orderId;
+    
+    try {
+      // Send order confirmation emails
+      const emailResponse = await fetch('/api/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderDetails }),
+      });
+      
+      const emailResult = await emailResponse.json();
+      
+      if (!emailResult.success) {
+        console.warn('Order created but email notification failed:', emailResult.message);
+        // Continue with success flow even if email fails
+      }
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      // Continue with success flow even if email fails
+    }
+    
+    // Call the success callback regardless of email status
+    onSuccess();
+  } else {
+    alert("✅ Order placed but couldn't retrieve order ID.");
+    onSuccess();
+  }
+  
   setSubmitting(false);
 };
 
@@ -133,7 +212,16 @@ export default function OrderForm({ cartItems, deliveryType, total, onSuccess }:
             />
           </div>
         </div>
-
+        <div className="form-group">
+          <input
+            required
+            name="email"
+            type="email"
+            placeholder="Email (for order confirmation)"
+            onChange={handleDeliveryChange}
+            value={deliveryForm.email}
+          />
+        </div>
         <div className="form-group">
           <input
             required
@@ -210,7 +298,16 @@ export default function OrderForm({ cartItems, deliveryType, total, onSuccess }:
           />
         </div>
       </div>
-
+      <div className="form-group">
+      <input
+        required
+        name="email"
+        type="email"
+        placeholder="Email (for order confirmation)"
+        onChange={handlePickupChange}
+        value={pickupForm.email}
+      />
+    </div>
       <div className="form-group">
         <input
           required
